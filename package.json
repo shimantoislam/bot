@@ -1,7 +1,7 @@
 {
   "name": "telegram-api",
   "version": "1.0.0",
-  "description": "API to send messages to Telegram",
+  "description": "API to send messages to Telegram with keep-alive for Render",
   "main": "index.js",
   "type": "module",
   "scripts": {
